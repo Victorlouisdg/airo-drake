@@ -36,7 +36,8 @@ def add_inverse_dynamics_controller(builder, plant, filename, model, num_robot_p
     controller_plant = MultibodyPlant(time_step=time_step)
     controller_parser = Parser(controller_plant)
     controller_robot_model = controller_parser.AddModelFromFile(filename)
-    q0 = np.array([0, -np.pi / 2, 0, -np.pi / 2 + np.pi / 64, 0, 0])
+    # q0 = np.array([0, -np.pi / 2, 0, -np.pi / 2 + np.pi / 64, 0, 0])
+    q0 = np.array([-np.pi / 2, -3.0 / 4.0 * np.pi, np.pi / 2, -np.pi / 4, -np.pi / 2, 0])
     index = 0
     for joint_index in controller_plant.GetJointIndices(controller_robot_model):
         joint = controller_plant.get_mutable_joint(joint_index)
