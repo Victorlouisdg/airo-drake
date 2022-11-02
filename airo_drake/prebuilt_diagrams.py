@@ -22,6 +22,7 @@ from pydrake.all import (
     Demultiplexer,
     RevoluteJoint,
     StateInterpolatorWithDiscreteDerivative,
+    SpatialInertia
 )
 from pydrake.systems.framework import Diagram, DiagramBuilder, System
 from pydrake.common import FindResourceOrThrow, temp_directory
@@ -62,7 +63,7 @@ def add_inverse_dynamics_controller(builder, plant, filename, model, num_robot_p
     return robot_controller
 
 
-def make_ur3e() -> Diagram:
+def make_ur3e(additional_model_files=[]) -> Diagram:
     time_step = 0.001
 
     filename = FindResourceOrThrow("drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf")
@@ -70,7 +71,19 @@ def make_ur3e() -> Diagram:
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=time_step)
     parser = Parser(plant, scene_graph)
     model = parser.AddModelFromFile(filename)
-    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName(UR_BASE_FRAME))
+
+    for model_file in additional_model_files:
+        parser.AddModelFromFile(model_file)
+    
+    table_center_frame = plant.GetFrameByName("table_top_center")
+    table_left_frame = plant.GetFrameByName("table_top_left")
+
+
+    plant.WeldFrames(plant.world_frame(), table_center_frame)
+
+    plant.WeldFrames(table_left_frame, plant.GetFrameByName(UR_BASE_FRAME))
+
+
     plant.Finalize()
 
     # Not sure what the use of this pass through is
