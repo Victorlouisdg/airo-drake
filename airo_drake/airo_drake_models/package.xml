@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package>
+  <name>airo_drake_models</name>
+  <version>1.0.0</version>
+  <description>
+    This package contains miscellaneous models used at IDLab-AIRO.
+  </description>
+  <author email="victorlouis.degusseme@ugent.be">Victor-Louis De Gusseme</author>
+  <maintainer email="victorlouis.degusseme@ugent.be">Victor-Louis De Gusseme</maintainer>
+  <license>BSD</license>
+</package>
