@@ -59,7 +59,6 @@ from pydrake.common import GetDrakePath
 
 def AddPackagePaths(parser):
     directory_name = os.path.dirname(__file__)
-    print("dirname", directory_name)
     parser.package_map().PopulateFromFolder(directory_name)
     parser.package_map().Add(
         "manipulation_station", os.path.join(GetDrakePath(), "examples/manipulation_station/models")
@@ -148,7 +147,6 @@ def AddDifferentialIKIntegrator(builder, dynamics_controller):
 
     # Hardcoded name of link in the WSG SDF
     frame = controller_plant.GetFrameByName("ur_ee_link")
-    print(frame)
 
     differential_IK_integrator = builder.AddSystem(
         DifferentialInverseKinematicsIntegrator(
@@ -156,6 +154,24 @@ def AddDifferentialIKIntegrator(builder, dynamics_controller):
         )
     )
     return differential_IK_integrator
+
+
+class WorldToRobotFrame(LeafSystem):
+    """Does not work for mobile robots."""
+    def __init__(self, plant, model_instance, base_frame):
+        LeafSystem.__init__(self)
+        self._X_WP_index = self.DeclareAbstractInputPort("X_WP", AbstractValue.Make(RigidTransform()))
+        self.DeclareAbstractOutputPort(
+            "X_RP", lambda: AbstractValue.Make(RigidTransform()), self.TransformWorldToRobot
+        )
+        plant_context = plant.CreateDefaultContext()
+        X_WR = plant.GetFrameByName(base_frame, model_instance).CalcPoseInWorld(plant_context)
+        self.X_RW = X_WR.inverse()
+
+    def TransformWorldToRobot(self, context, output):
+        X_WP = self.get_input_port(0).Eval(context)
+        X_RP = self.X_RW @ X_WP
+        output.set_value(X_RP)
 
 
 def SetupRobot(builder, plant, model_instance):
@@ -180,9 +196,12 @@ def SetupRobot(builder, plant, model_instance):
     # robot_state_zeros = builder.AddSystem(ConstantVectorSource(2 * [0] * num_robot_positions))
     # builder.Connect(robot_state_zeros.get_output_port(0), dynamics_controller.get_input_port(1))
 
-    # Add the DifferentialIK, which takes gripper poses and outputs joint positions
+    # Add the DifferentialIK, which takes gripper poses in robot frame and outputs joint positions
     diff_ik = AddDifferentialIKIntegrator(builder, dynamics_controller)
-    builder.ExportInput(diff_ik.get_input_port(0), f"{robot_name}_end_effector_pose")
+
+    transform = builder.AddSystem(WorldToRobotFrame(plant, model_instance, "ur_base_link"))
+    builder.ExportInput(transform.get_input_port(0), f"{robot_name}_X_WE")
+    builder.Connect(transform.get_output_port(0), diff_ik.get_input_port(0))
     builder.Connect(plant.get_state_output_port(model_instance), diff_ik.GetInputPort("robot_state"))
 
     # Add discrete derivative to command velocities.

@@ -1,6 +1,12 @@
 
 directives:
 - add_model:
+    name: airo_cart
+    file: package://airo_drake_models/airo_cart.sdf
+- add_weld:
+    parent: world
+    child: airo_cart::table_center
+- add_model:
     name: ur3e_left
     file: package://drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf
     default_joint_positions:
@@ -11,14 +17,36 @@ directives:
         ur_wrist_2_joint: [-1.57]       # -pi/2 
         ur_wrist_3_joint: [0]           # 0
 - add_weld:
-    parent: world
+    parent: airo_cart::table_left
     child: ur3e_left::ur_base_link
 - add_model:
-    name: wsg
+    name: wsg_left
     file: package://drake/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_with_tip.sdf
 - add_weld:
     parent: ur3e_left::ur_ee_link
-    child: wsg::body
+    child: wsg_left::body
+    X_PC:
+        translation: [0.04, 0, 0]
+        rotation: !Rpy { deg: [0, 0, -90]}
+- add_model:
+    name: ur3e_right
+    file: package://drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf
+    default_joint_positions:
+        ur_shoulder_pan_joint: [1.57]   # pi/2
+        ur_shoulder_lift_joint: [-0.79] # -1/4 pi
+        ur_elbow_joint: [-1.57]         # -pi/2
+        ur_wrist_1_joint: [-2.36]       # -3/4 pi/
+        ur_wrist_2_joint: [1.57]        # pi/2 
+        ur_wrist_3_joint: [0]           # 0
+- add_weld:
+    parent: airo_cart::table_right
+    child: ur3e_right::ur_base_link
+- add_model:
+    name: wsg_right
+    file: package://drake/manipulation/models/wsg_50_description/sdf/schunk_wsg_50_with_tip.sdf
+- add_weld:
+    parent: ur3e_right::ur_ee_link
+    child: wsg_right::body
     X_PC:
         translation: [0.04, 0, 0]
         rotation: !Rpy { deg: [0, 0, -90]}
