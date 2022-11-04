@@ -115,11 +115,13 @@ def AddInverseDynamicsController(builder, plant, model_instance) -> System:
     controller_plant.Finalize()
 
     num_robot_positions = plant.num_positions(model_instance)
-    kp = np.full(num_robot_positions, 100)
-    ki = np.full(num_robot_positions, 2 * np.sqrt(kp))
-    kd = np.full(num_robot_positions, 20)
+    kp = np.full(num_robot_positions, 1000)
+    ki = np.full(num_robot_positions, 5000)
+    kd = np.full(num_robot_positions, 1000)
 
-    inverse_dynamics_controller = InverseDynamicsController(controller_plant, kp, ki, kd, False)
+    inverse_dynamics_controller = InverseDynamicsController(
+        controller_plant, kp, ki, kd, has_reference_acceleration=False
+    )
     robot_controller = builder.AddSystem(inverse_dynamics_controller)
     builder.Connect(plant.get_state_output_port(model_instance), robot_controller.get_input_port_estimated_state())
     builder.Connect(robot_controller.get_output_port_control(), plant.get_actuation_input_port(model_instance))
@@ -208,7 +210,7 @@ def SetupGripper(builder, plant, model_instance):
     builder.Connect(gripper_zeros.get_output_port(0), plant.get_actuation_input_port(model_instance))
 
 
-def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.002):
+def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
     builder = DiagramBuilder()
 
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=time_step)
