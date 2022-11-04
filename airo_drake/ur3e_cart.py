@@ -55,6 +55,7 @@ from pydrake.manipulation.planner import (
 )
 
 from pydrake.common import GetDrakePath
+from airo_drake.util_systems import WorldToRobotFrame, ExtractBodyPose
 
 
 def AddPackagePaths(parser):
@@ -156,24 +157,6 @@ def AddDifferentialIKIntegrator(builder, dynamics_controller):
     return differential_IK_integrator
 
 
-class WorldToRobotFrame(LeafSystem):
-    """Does not work for mobile robots."""
-    def __init__(self, plant, model_instance, base_frame):
-        LeafSystem.__init__(self)
-        self._X_WP_index = self.DeclareAbstractInputPort("X_WP", AbstractValue.Make(RigidTransform()))
-        self.DeclareAbstractOutputPort(
-            "X_RP", lambda: AbstractValue.Make(RigidTransform()), self.TransformWorldToRobot
-        )
-        plant_context = plant.CreateDefaultContext()
-        X_WR = plant.GetFrameByName(base_frame, model_instance).CalcPoseInWorld(plant_context)
-        self.X_RW = X_WR.inverse()
-
-    def TransformWorldToRobot(self, context, output):
-        X_WP = self.get_input_port(0).Eval(context)
-        X_RP = self.X_RW @ X_WP
-        output.set_value(X_RP)
-
-
 def SetupRobot(builder, plant, model_instance):
     robot_name = plant.GetModelInstanceName(model_instance)
 
@@ -213,6 +196,11 @@ def SetupRobot(builder, plant, model_instance):
     desired_state_from_position.set_name(f"{robot_name}_desired_state_from_position")
     builder.Connect(diff_ik.GetOutputPort("joint_positions"), desired_state_from_position.get_input_port())
     builder.Connect(desired_state_from_position.get_output_port(), dynamics_controller.get_input_port_desired_state())
+
+    body_index = plant.GetBodyByName("ur_ee_link", model_instance).index()
+    gripper_pose = builder.AddSystem(ExtractBodyPose(plant, body_index))
+    builder.Connect(plant.get_body_poses_output_port(), gripper_pose.GetInputPort("poses"))
+    builder.ExportOutput(gripper_pose.GetOutputPort("pose"), f"{robot_name}_X_WE_estimated")
 
 
 def SetupGripper(builder, plant, model_instance):
