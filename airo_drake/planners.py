@@ -1,11 +1,8 @@
-from pydrake.all import (
-    AbstractValue,
-    LeafSystem,
-    RigidTransform,
-    PiecewisePose,
-    Rgba
-)
+from pydrake.all import AbstractValue, LeafSystem, RigidTransform, PiecewisePose, Rgba
 import numpy as np
+
+from airo_drake.visualization import AddMeshcatTriad
+
 
 class Planner(LeafSystem):
     def __init__(self, plant, meshcat):
@@ -13,14 +10,17 @@ class Planner(LeafSystem):
         self.DeclareAbstractInputPort("left_X_WE_current", AbstractValue.Make(RigidTransform()))
         self.DeclareAbstractInputPort("right_X_WE_current", AbstractValue.Make(RigidTransform()))
 
-        self.DeclareAbstractOutputPort("left_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcLeftGripperPose)
-        self.DeclareAbstractOutputPort("right_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcRightGripperPose)
+        self.DeclareAbstractOutputPort(
+            "left_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcLeftGripperPose
+        )
+        self.DeclareAbstractOutputPort(
+            "right_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcRightGripperPose
+        )
         self.plant = plant
         self.inital_pose_right = None
         self.inital_pose_left = None
         self.right_traj_X_G = None
         self.meshcat = meshcat
-
 
     def CalcRightGripperTrajectory(self, context):
         right_X_WE_current = self.get_input_port(1).Eval(context)
@@ -34,24 +34,11 @@ class Planner(LeafSystem):
         up = RigidTransform(back)
         up.set_translation(up.translation() + [0, 0, 0.1])
 
+        X_G = {"initial": right_X_WE_current, "start": start, "down": down, "back": back, "up": up}
+        times = {"initial": 0.0, "start": 2.0, "down": 3.0, "back": 4.0, "up": 5.0}
 
-
-
-        X_G = {
-            "initial": right_X_WE_current,
-            "start": start,
-            "down": down,
-            "back": back,
-            "up": up
-        }
-        times = {
-            "initial": 0.0,
-            "start": 2.0,
-            "down": 3.0,
-            "back": 4.0,
-            "up": 5.0
-        }
-
+        for name, X in X_G.items():
+            AddMeshcatTriad(self.meshcat, f"X_G{name}", X_PT=X)
 
         X_G = list(X_G.values())
         times = list(times.values())
@@ -63,9 +50,7 @@ class Planner(LeafSystem):
 
         starts = p_G[:, :-1]
         ends = p_G[:, 1:]
-        self.meshcat.SetLineSegments('p_G', starts, ends, 2.0, rgba=Rgba(1, 0.65, 0))
-
-
+        self.meshcat.SetLineSegments("p_G", starts, ends, 2.0, rgba=Rgba(1, 0.65, 0))
 
     def CalcLeftGripperPose(self, context, output):
         left_X_WE_current = self.get_input_port(0).Eval(context)
@@ -90,4 +75,3 @@ class Planner(LeafSystem):
             self.inital_pose_right = RigidTransform(right_X_WE_current)
 
         output.set_value(self.inital_pose_right)
-
