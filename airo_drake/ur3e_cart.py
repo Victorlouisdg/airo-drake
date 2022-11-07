@@ -149,7 +149,7 @@ def AddDifferentialIKIntegrator(builder, dynamics_controller):
     params.set_joint_centering_gain(10 * np.eye(num_robot_positions))  # not sure what this is used for
 
     # Hardcoded name of link in the WSG SDF
-    frame = controller_plant.GetFrameByName("ur_ee_link")
+    frame = controller_plant.GetFrameByName("ur_tool0")
 
     differential_IK_integrator = builder.AddSystem(
         DifferentialInverseKinematicsIntegrator(
@@ -199,7 +199,7 @@ def SetupRobot(builder, plant, model_instance):
     builder.Connect(diff_ik.GetOutputPort("joint_positions"), desired_state_from_position.get_input_port())
     builder.Connect(desired_state_from_position.get_output_port(), dynamics_controller.get_input_port_desired_state())
 
-    body_index = plant.GetBodyByName("ur_ee_link", model_instance).index()
+    body_index = plant.GetBodyByName("ur_tool0", model_instance).index()
     gripper_pose = builder.AddSystem(ExtractBodyPose(plant, body_index))
     builder.Connect(plant.get_body_poses_output_port(), gripper_pose.GetInputPort("poses"))
     builder.ExportOutput(gripper_pose.GetOutputPort("pose"), f"{robot_name}_X_WE_estimated")
