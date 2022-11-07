@@ -206,8 +206,22 @@ def SetupRobot(builder, plant, model_instance):
 
 
 def SetupGripper(builder, plant, model_instance):
-    gripper_zeros = builder.AddSystem(ConstantVectorSource(2 * [0]))
-    builder.Connect(gripper_zeros.get_output_port(0), plant.get_actuation_input_port(model_instance))
+    gripper_name = plant.GetModelInstanceName(model_instance)
+    wsg_controller = builder.AddSystem(SchunkWsgPositionController())
+    wsg_controller.set_name(gripper_name + "_controller")
+
+    builder.Connect(wsg_controller.get_generalized_force_output_port(), plant.get_actuation_input_port(model_instance))
+    builder.Connect(plant.get_state_output_port(model_instance), wsg_controller.get_state_input_port())
+
+    builder.ExportInput(wsg_controller.get_desired_position_input_port(), gripper_name + "_position")
+
+    wsg_mbp_state_to_wsg_state = builder.AddSystem(MakeMultibodyStateToWsgStateSystem())
+    builder.Connect(plant.get_state_output_port(model_instance), wsg_mbp_state_to_wsg_state.get_input_port())
+    builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), gripper_name + "_state_measured")
+    builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force_measured")
+
+    # gripper_zeros = builder.AddSystem(ConstantVectorSource(2 * [0]))
+    # builder.Connect(gripper_zeros.get_output_port(0), plant.get_actuation_input_port(model_instance))
 
 
 def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):

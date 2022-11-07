@@ -1,4 +1,4 @@
-from pydrake.all import AbstractValue, LeafSystem, RigidTransform, PiecewisePose, Rgba
+from pydrake.all import AbstractValue, LeafSystem, RigidTransform, PiecewisePose, Rgba, PiecewisePolynomial
 import numpy as np
 
 from airo_drake.visualization import AddMeshcatTriad
@@ -7,22 +7,33 @@ from airo_drake.visualization import AddMeshcatTriad
 class Planner(LeafSystem):
     def __init__(self, plant, meshcat):
         LeafSystem.__init__(self)
+
+        # State inputs
         self.DeclareAbstractInputPort("left_X_WE_current", AbstractValue.Make(RigidTransform()))
         self.DeclareAbstractInputPort("right_X_WE_current", AbstractValue.Make(RigidTransform()))
+        # I believe gripper_state is distance between fingers and its time derivative.
+        self.DeclareVectorInputPort("left_gripper_state", 2)
+        self.DeclareVectorInputPort("right_gripper_state", 2)
 
+        # Desired state outputs
         self.DeclareAbstractOutputPort(
-            "left_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcLeftGripperPose
+            "left_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputLeftGripperPose
         )
         self.DeclareAbstractOutputPort(
-            "right_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.CalcRightGripperPose
+            "right_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputRightGripperPose
         )
+        self.DeclareVectorOutputPort("left_gripper_position_desired", 1, self.OutputLeftGripperPosition)
+        self.DeclareVectorOutputPort("right_gripper_position_desired", 1, self.OutputRightGripperPosition)
+
         self.plant = plant
         self.inital_pose_right = None
         self.inital_pose_left = None
         self.right_traj_X_G = None
         self.meshcat = meshcat
+        self.gripper_max_open_distance = 0.107
+        self.left_gripper_traj = None
 
-    def CalcRightGripperTrajectory(self, context):
+    def CalcRightGripperPoseTrajectory(self, context):
         right_X_WE_current = self.get_input_port(1).Eval(context)
 
         start = RigidTransform(right_X_WE_current)
@@ -52,7 +63,14 @@ class Planner(LeafSystem):
         ends = p_G[:, 1:]
         self.meshcat.SetLineSegments("p_G", starts, ends, 2.0, rgba=Rgba(1, 0.65, 0))
 
-    def CalcLeftGripperPose(self, context, output):
+    def CalculateLeftFingersTrajectory(self, context):
+        opened = self.gripper_max_open_distance
+        closed = 0.0
+        self.left_gripper_traj = PiecewisePolynomial.FirstOrderHold(
+            np.array([0.0, 2.0, 4.0, 5.0]), np.array([closed, opened, opened / 2.0, opened]).reshape([1, -1])
+        )
+
+    def OutputLeftGripperPose(self, context, output):
         left_X_WE_current = self.get_input_port(0).Eval(context)
         if self.inital_pose_left is None:
             self.inital_pose_left = RigidTransform(left_X_WE_current)
@@ -61,9 +79,9 @@ class Planner(LeafSystem):
         output.set_value(self.inital_pose_left)
         # output.set_value(RigidTransform([-0.3, -0.3, 0.5]))
 
-    def CalcRightGripperPose(self, context, output):
+    def OutputRightGripperPose(self, context, output):
         if self.right_traj_X_G is None:
-            self.CalcRightGripperTrajectory(context)
+            self.CalcRightGripperPoseTrajectory(context)
 
         if self.right_traj_X_G is not None:
             X_WE = self.right_traj_X_G.GetPose(context.get_time())
@@ -75,3 +93,11 @@ class Planner(LeafSystem):
             self.inital_pose_right = RigidTransform(right_X_WE_current)
 
         output.set_value(self.inital_pose_right)
+
+    def OutputLeftGripperPosition(self, context, output):
+        if self.left_gripper_traj is None:
+            self.CalculateLeftFingersTrajectory(context)
+        output.SetFromVector(self.left_gripper_traj.value(context.get_time()))
+
+    def OutputRightGripperPosition(self, context, output):
+        output.set_value(np.array([self.gripper_max_open_distance]))
