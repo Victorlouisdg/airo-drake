@@ -21,14 +21,22 @@ def AddMeshcatTriad(meshcat, path, length=0.05, radius=0.002, opacity=1.0, X_PT=
     meshcat.SetObject(path + "/z-axis", Cylinder(radius, length), Rgba(0, 0, 1, opacity))
 
 
-def VisualizePoseTrajectory(meshcat, path, trajectory, key_poses={}):
-        traj_X_G = trajectory
-        traj_p_G = traj_X_G.get_position_trajectory()
-        p_G = traj_p_G.vector_values(traj_p_G.get_segment_times())
 
-        starts = p_G[:, :-1]
-        ends = p_G[:, 1:]
-        meshcat.SetLineSegments(path, starts, ends, 2.0, rgba=Rgba(1, 0.65, 0))
+def VisualizePath(meshcat, treepath, path, closed=False, thickness=2, color=Rgba(1, 0.65, 0)):
+    end_index = path.shape[1]
+    if not closed:
+        end_index -= 1
+    starts = path[:, :end_index]
+    ends = path.take(range(1, end_index+1), axis=1, mode="wrap")
+    meshcat.SetLineSegments(treepath, starts, ends, thickness, rgba=color)
 
-        for name, X in key_poses.items():
-            AddMeshcatTriad(meshcat, f"X_G{name}", X_PT=X)
+
+def VisualizePoseTrajectory(meshcat, treepath, trajectory, key_poses={}, color=Rgba(1, 0.65, 0)):
+    traj_X_G = trajectory
+    traj_p_G = traj_X_G.get_position_trajectory()
+    p_G = traj_p_G.vector_values(traj_p_G.get_segment_times())
+
+    VisualizePath(meshcat, treepath, p_G, color)
+
+    for name, X in key_poses.items():
+        AddMeshcatTriad(meshcat, f"X_G{name}", X_PT=X)

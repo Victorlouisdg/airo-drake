@@ -1,7 +1,8 @@
 from pydrake.all import AbstractValue, LeafSystem, RigidTransform, PiecewisePose, Rgba, PiecewisePolynomial
 import numpy as np
+from airo_drake.cloth_manipulation.towel import fake_towel_keypoints, order_keypoints
 
-from airo_drake.visualization import AddMeshcatTriad, VisualizePoseTrajectory
+from airo_drake.visualization import AddMeshcatTriad, VisualizePath, VisualizePoseTrajectory
 
 
 class DualArmPlannerBase(LeafSystem):
@@ -87,20 +88,30 @@ class DualArmPlannerBase(LeafSystem):
 
 
 class TowelFoldPlanner(DualArmPlannerBase):
+    def __init__(self, plant, meshcat):
+        super().__init__(plant, meshcat)
+        self.towel_keypoints = fake_towel_keypoints(height=0.0)  # later this should be an inputport
+        VisualizePath(meshcat, "towel_keypoints", self.towel_keypoints, closed=True, color=Rgba(0, 1, 1), thickness=10)
+
+    def get_grasp_poses(self, keypoints):
+        left_grasp_pose = None
+        ordered_keypoints = order_keypoints(keypoints)
+
+        initial_X_WE = self.right_X_WE_initial
+        initial_rotation = initial_X_WE.rotation()
+
+        bottom_right_corner = ordered_keypoints[:, 3] + np.array([0, 0, 0.2])
+
+        right_grasp_pose = RigidTransform(initial_rotation, bottom_right_corner)
+        return left_grasp_pose, right_grasp_pose
+
     def Plan(self, context, state):
         initial_X_WE = self.right_X_WE_initial
 
-        start = RigidTransform(initial_X_WE)
-        start.set_translation(start.translation() + [0, -0.2, 0])
-        down = RigidTransform(start)
-        down.set_translation(down.translation() + [0, 0, -0.1])
-        back = RigidTransform(down)
-        back.set_translation(back.translation() + [0, 0.1, 0])
-        up = RigidTransform(back)
-        up.set_translation(up.translation() + [0, 0, 0.1])
+        _, right_grasp_pose = self.get_grasp_poses(self.towel_keypoints)
 
-        X_G = {"initial": initial_X_WE, "start": start, "down": down, "back": back, "up": up}
-        times = {"initial": 0.0, "start": 2.0, "down": 3.0, "back": 4.0, "up": 5.0}
+        X_G = {"initial": initial_X_WE, "pregrasp": right_grasp_pose}
+        times = {"initial": 0.0, "pregrasp": 2.0}
 
         self.right_traj_key_poses = X_G
         X_G = list(X_G.values())
