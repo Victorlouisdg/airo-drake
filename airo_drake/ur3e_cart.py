@@ -55,7 +55,7 @@ from pydrake.manipulation.planner import (
 )
 
 from pydrake.common import GetDrakePath
-from airo_drake.util_systems import WorldToRobotFrame, ExtractBodyPose
+from airo_drake.util_systems import ExtractTCPPose, WorldTCPToRobotEEFFrame, WorldToRobotFrame, ExtractBodyPose
 
 
 def AddPackagePaths(parser):
@@ -184,8 +184,9 @@ def SetupRobot(builder, plant, model_instance):
     # Add the DifferentialIK, which takes gripper poses in robot frame and outputs joint positions
     diff_ik = AddDifferentialIKIntegrator(builder, dynamics_controller)
 
-    transform = builder.AddSystem(WorldToRobotFrame(plant, model_instance, "ur_base_link"))
-    builder.ExportInput(transform.get_input_port(0), f"{robot_name}_X_WE")
+    tcp_offset = 0.16
+    transform = builder.AddSystem(WorldTCPToRobotEEFFrame(plant, model_instance, "ur_base_link", tcp_offset))
+    builder.ExportInput(transform.get_input_port(0), f"{robot_name}_X_WT")
     builder.Connect(transform.get_output_port(0), diff_ik.get_input_port(0))
     builder.Connect(plant.get_state_output_port(model_instance), diff_ik.GetInputPort("robot_state"))
 
@@ -200,7 +201,7 @@ def SetupRobot(builder, plant, model_instance):
     builder.Connect(desired_state_from_position.get_output_port(), dynamics_controller.get_input_port_desired_state())
 
     body_index = plant.GetBodyByName("ur_tool0", model_instance).index()
-    gripper_pose = builder.AddSystem(ExtractBodyPose(plant, body_index))
+    gripper_pose = builder.AddSystem(ExtractTCPPose(plant, body_index, tcp_offset))
     builder.Connect(plant.get_body_poses_output_port(), gripper_pose.GetInputPort("poses"))
     builder.ExportOutput(gripper_pose.GetOutputPort("pose"), f"{robot_name}_X_WE_estimated")
 

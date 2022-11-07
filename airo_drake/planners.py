@@ -100,7 +100,7 @@ class TowelFoldPlanner(DualArmPlannerBase):
         initial_X_WE = self.right_X_WE_initial
         initial_rotation = initial_X_WE.rotation()
 
-        bottom_right_corner = ordered_keypoints[:, 3] + np.array([0, 0, 0.2])
+        bottom_right_corner = ordered_keypoints[:, 3]
 
         right_grasp_pose = RigidTransform(initial_rotation, bottom_right_corner)
         return left_grasp_pose, right_grasp_pose
