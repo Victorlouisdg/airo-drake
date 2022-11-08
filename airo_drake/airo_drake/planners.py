@@ -6,7 +6,7 @@ from pydrake.all import (
     Rgba,
     PiecewisePolynomial,
     RotationMatrix,
-    AngleAxis
+    AngleAxis,
 )
 import numpy as np
 from airo_drake.cloth_manipulation.towel import fake_towel_keypoints, order_keypoints
@@ -56,6 +56,7 @@ class DualArmPlannerBase(LeafSystem):
         right_gripper_open_distance = right_gripper_state_current[1]
 
         self.right_X_WE_initial = right_X_WE_current
+        self.left_X_WE_initial = left_X_WE_current
 
         left_X_G = {"initial": left_X_WE_current, "hold": left_X_WE_current}
         right_X_G = {"initial": right_X_WE_current, "hold": right_X_WE_current}
@@ -69,7 +70,7 @@ class DualArmPlannerBase(LeafSystem):
         self.left_gripper_traj = PiecewisePolynomial.ZeroOrderHold(
             [0.0, 1.0], [[left_gripper_open_distance, left_gripper_open_distance]]
         )
-        self.rigjt_gripper_traj = PiecewisePolynomial.ZeroOrderHold(
+        self.right_gripper_traj = PiecewisePolynomial.ZeroOrderHold(
             [0.0, 1.0], [[right_gripper_open_distance, right_gripper_open_distance]]
         )
 
@@ -94,7 +95,7 @@ class DualArmPlannerBase(LeafSystem):
         output.SetFromVector(self.left_gripper_traj.value(context.get_time()))
 
     def OutputRightGripperPosition(self, context, output):
-        output.SetFromVector(self.left_gripper_traj.value(context.get_time()))
+        output.SetFromVector(self.right_gripper_traj.value(context.get_time()))
 
 
 class TowelFoldPlanner(DualArmPlannerBase):
@@ -103,48 +104,42 @@ class TowelFoldPlanner(DualArmPlannerBase):
         self.towel_keypoints = fake_towel_keypoints(height=0.0)  # later this should be an inputport
         VisualizePath(meshcat, "towel_keypoints", self.towel_keypoints, closed=True, color=Rgba(0, 1, 1), thickness=10)
 
-    def get_grasp_poses(self, keypoints):
+    def get_fold_keyposes(self, keypoints):
         left_grasp_pose = None
         ordered_keypoints = order_keypoints(keypoints)
         right_edge = ordered_keypoints[:, 0] - ordered_keypoints[:, 3]
 
-        initial_X_WE = self.right_X_WE_initial
-        initial_rotation = initial_X_WE.rotation()
-
-        global_y_rotation = RotationMatrix.MakeYRotation(np.deg2rad(15))
-
-
         topdown = RotationMatrix(top_down_orientation(right_edge))
-
-
-        tilt_angle = 15
+        tilt_angle = 30
         gripper_y = topdown.col(1)
-        # local_y_rotation = Rotation.from_rotvec(np.deg2rad(tilt_angle) * gripper_y)
-
         local_y_rotation = RotationMatrix(AngleAxis(np.deg2rad(tilt_angle), gripper_y))
-
-        topdown = RotationMatrix(top_down_orientation(right_edge))
         rotation = local_y_rotation @ topdown
-
-        # print(topdown)
-
         bottom_right_corner = ordered_keypoints[:, 3]
+        bottom_left_corner = ordered_keypoints[:, 2]
 
         right_grasp_pose = RigidTransform(rotation, bottom_right_corner)
-        return left_grasp_pose, right_grasp_pose
+        left_grasp_pose = RigidTransform(rotation, bottom_left_corner)
+
+        left_keyposes = {"pregrasp": left_grasp_pose, "grasp": left_grasp_pose}
+        right_keyposes = {"pregrasp": right_grasp_pose, "grasp": right_grasp_pose}
+
+        return left_keyposes, right_keyposes
 
     def Plan(self, context, state):
-        initial_X_WE = self.right_X_WE_initial
+        left_keyposes, right_keyposes = self.get_fold_keyposes(self.towel_keypoints)
+        left_X_G = {"initial": self.left_X_WE_initial, **left_keyposes}
+        right_X_G = {"initial": self.right_X_WE_initial, **right_keyposes}
+        times = {"initial": 0.0, "pregrasp": 2.0, "grasp": 2.1}
 
-        _, right_grasp_pose = self.get_grasp_poses(self.towel_keypoints)
+        def FoldingTrajectory(key_poses, times):
+            X_G = list(key_poses.values())
+            times = list(times.values())
+            traj_X_G = PiecewisePose.MakeLinear(times, X_G)
+            return traj_X_G
 
-        X_G = {"initial": initial_X_WE, "pregrasp": right_grasp_pose}
-        times = {"initial": 0.0, "pregrasp": 2.0}
-
-        self.right_traj_key_poses = X_G
-        X_G = list(X_G.values())
-        times = list(times.values())
-        traj_X_G = PiecewisePose.MakeLinear(times, X_G)
-        self.right_traj_X_G = traj_X_G
+        self.left_traj_key_poses = left_X_G
+        self.left_traj_X_G = FoldingTrajectory(left_X_G, times)
+        self.right_traj_key_poses = right_X_G
+        self.right_traj_X_G = FoldingTrajectory(right_X_G, times)
 
         self.UpdatePlanVisualization()

@@ -39,4 +39,4 @@ def VisualizePoseTrajectory(meshcat, treepath, trajectory, key_poses={}, color=R
     VisualizePath(meshcat, treepath, p_G, color)
 
     for name, X in key_poses.items():
-        AddMeshcatTriad(meshcat, f"X_G{name}", X_PT=X)
+        AddMeshcatTriad(meshcat, f"{treepath}/X_G{name}", X_PT=X)
