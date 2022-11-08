@@ -9,7 +9,7 @@ conda env create -f environment.yaml
 conda activate drake
 conda develop ~/drake-build/install/lib/python3.8/site-packages/
 ```
-When installing drake through pip, not all models are included due to their large size. 
+When installing drake through pip, not all models are included due to their large size.
 
 # Usage
 You can start exploring by running the [notebooks](notebooks).

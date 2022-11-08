@@ -1,66 +1,37 @@
 import os
-import sys
-import warnings
 
 import numpy as np
 from pydrake.all import (
-    AbstractValue,
-    Adder,
     AddMultibodyPlantSceneGraph,
-    BallRpyJoint,
-    BaseField,
-    Box,
-    CameraInfo,
-    ClippingRange,
-    CoulombFriction,
-    Cylinder,
     Demultiplexer,
-    DepthImageToPointCloud,
-    DepthRange,
-    DepthRenderCamera,
     DiagramBuilder,
-    FindResourceOrThrow,
-    GeometryInstance,
     InverseDynamicsController,
-    LeafSystem,
     LoadModelDirectivesFromString,
     MakeMultibodyStateToWsgStateSystem,
-    MakePhongIllustrationProperties,
-    MakeRenderEngineVtk,
     ModelInstanceIndex,
     MultibodyPlant,
     Parser,
     PassThrough,
-    PrismaticJoint,
     ProcessModelDirectives,
-    RenderCameraCore,
-    RenderEngineVtkParams,
     RevoluteJoint,
-    Rgba,
-    RgbdSensor,
     RigidTransform,
-    RollPitchYaw,
     RotationMatrix,
     SchunkWsgPositionController,
-    SpatialInertia,
-    Sphere,
     StateInterpolatorWithDiscreteDerivative,
-    UnitInertia,
     System,
-    ConstantVectorSource,
 )
+from pydrake.common import GetDrakePath
 from pydrake.manipulation.planner import (
     DifferentialInverseKinematicsIntegrator,
     DifferentialInverseKinematicsParameters,
 )
 
-from pydrake.common import GetDrakePath
-from airo_drake.util_systems import ExtractTCPPose, WorldTCPToRobotEEFFrame, WorldToRobotFrame, ExtractBodyPose
+from airo_drake.util_systems import ExtractTCPPose, WorldTCPToRobotEEFFrame
 
 
 def AddPackagePaths(parser):
-    directory_name = os.path.dirname(__file__)
-    parser.package_map().PopulateFromFolder(directory_name)
+    package_directory = os.path.dirname(os.path.dirname(__file__))  # TODO make this more robust
+    parser.package_map().PopulateFromFolder(package_directory)
     parser.package_map().Add(
         "manipulation_station", os.path.join(GetDrakePath(), "examples/manipulation_station/models")
     )
@@ -89,7 +60,7 @@ def CopyModelBetweenPlants(model_instance, plant_from, plant_to):
     print("WARNING: CopyModelBetweenPlants not implemented correctly yet!")
     # TODO Figure out how to implement actual copy.
     name = plant_from.GetModelInstanceName(model_instance)
-    instance_to = plant_to.AddModelInstance(name)
+    plant_to.AddModelInstance(name)
     # plant_to.some_function()
 
     # Temporary workaround, reload from URDF.
@@ -190,15 +161,10 @@ def SetupRobot(builder, plant, model_instance):
     dynamics_controller = AddInverseDynamicsController(builder, plant, model_instance)
     dynamics_controller.set_name(f"{robot_name}_dynamics_controller")
 
-    # robot_state_zeros = builder.AddSystem(ConstantVectorSource(2 * [0] * num_robot_positions))
-    # builder.Connect(robot_state_zeros.get_output_port(0), dynamics_controller.get_input_port(1))
-
     # Add the DifferentialIK, which takes gripper poses in robot frame and outputs joint positions
     diff_ik = AddDifferentialIKIntegrator(builder, dynamics_controller)
 
-
-
-    tcp_transform = RigidTransform(RotationMatrix.MakeZRotation(np.deg2rad(90)), [0,0,0.16])
+    tcp_transform = RigidTransform(RotationMatrix.MakeZRotation(np.deg2rad(90)), [0, 0, 0.16])
     # tcp_offset = 0.16
     transform = builder.AddSystem(WorldTCPToRobotEEFFrame(plant, model_instance, "ur_base_link", tcp_transform))
     builder.ExportInput(transform.get_input_port(0), f"{robot_name}_X_WT")
@@ -235,9 +201,6 @@ def SetupGripper(builder, plant, model_instance):
     builder.Connect(plant.get_state_output_port(model_instance), wsg_mbp_state_to_wsg_state.get_input_port())
     builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), gripper_name + "_state_measured")
     builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force_measured")
-
-    # gripper_zeros = builder.AddSystem(ConstantVectorSource(2 * [0]))
-    # builder.Connect(gripper_zeros.get_output_port(0), plant.get_actuation_input_port(model_instance))
 
 
 def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):

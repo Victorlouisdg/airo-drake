@@ -1,4 +1,3 @@
-
 directives:
 - add_model:
     name: airo_cart
@@ -14,7 +13,7 @@ directives:
         ur_shoulder_lift_joint: [-2.36] # -3/4 pi
         ur_elbow_joint: [1.57]          # pi/2
         ur_wrist_1_joint: [-0.79]       # -pi/4
-        ur_wrist_2_joint: [-1.57]       # -pi/2 
+        ur_wrist_2_joint: [-1.57]       # -pi/2
         ur_wrist_3_joint: [0]           # 0
 - add_weld:
     parent: airo_cart::table_left
@@ -26,7 +25,7 @@ directives:
     parent: ur3e_left::ur_tool0
     child: wsg_left::body
     X_PC:
-        rotation: !Rpy { deg: [90, 0, 90]}
+        rotation: !Rpy {deg: [90, 0, 90]}
         translation: [0, 0, 0.04]
 - add_model:
     name: ur3e_right
@@ -36,7 +35,7 @@ directives:
         ur_shoulder_lift_joint: [-0.79] # -1/4 pi
         ur_elbow_joint: [-1.57]         # -pi/2
         ur_wrist_1_joint: [-2.36]       # -3/4 pi/
-        ur_wrist_2_joint: [1.57]        # pi/2 
+        ur_wrist_2_joint: [1.57]        # pi/2
         ur_wrist_3_joint: [0]           # 0
 - add_weld:
     parent: airo_cart::table_right
@@ -48,5 +47,5 @@ directives:
     parent: ur3e_right::ur_tool0
     child: wsg_right::body
     X_PC:
-        rotation: !Rpy { deg: [90, 0, 90]}
+        rotation: !Rpy {deg: [90, 0, 90]}
         translation: [0, 0, 0.04]

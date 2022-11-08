@@ -26,14 +26,13 @@ def angle_2D(v0, v1):
     return angle
 
 
-
 def order_keypoints(keypoints):
     """
     orders keypoints according to their angle w.r.t. a frame that is created by translating the world frame to the center of the cloth.
     the first keypoints is the one with the smallest, positive angle and they are sorted counter-clockwise.
     """
     center = np.mean(keypoints, axis=1)
-    x_axis = np.array([1, 0])#.reshape((2,1))
+    x_axis = np.array([1, 0])  # .reshape((2,1))
     angles = [angle_2D(x_axis, keypoint - center) for keypoint in keypoints.T]
     angles = [angle % (2 * np.pi) for angle in angles]  # make angles positive from 0 to 2*pi
     keypoints_sorted = keypoints[:, np.argsort(angles)]

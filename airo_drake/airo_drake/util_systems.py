@@ -1,60 +1,5 @@
-import os
-import sys
-import warnings
+from pydrake.all import AbstractValue, LeafSystem, RigidTransform
 
-import numpy as np
-from pydrake.all import (
-    AbstractValue,
-    Adder,
-    AddMultibodyPlantSceneGraph,
-    BallRpyJoint,
-    BaseField,
-    Box,
-    CameraInfo,
-    ClippingRange,
-    CoulombFriction,
-    Cylinder,
-    Demultiplexer,
-    DepthImageToPointCloud,
-    DepthRange,
-    DepthRenderCamera,
-    DiagramBuilder,
-    FindResourceOrThrow,
-    GeometryInstance,
-    InverseDynamicsController,
-    LeafSystem,
-    LoadModelDirectivesFromString,
-    MakeMultibodyStateToWsgStateSystem,
-    MakePhongIllustrationProperties,
-    MakeRenderEngineVtk,
-    ModelInstanceIndex,
-    MultibodyPlant,
-    Parser,
-    PassThrough,
-    PrismaticJoint,
-    ProcessModelDirectives,
-    RenderCameraCore,
-    RenderEngineVtkParams,
-    RevoluteJoint,
-    Rgba,
-    RgbdSensor,
-    RigidTransform,
-    RollPitchYaw,
-    RotationMatrix,
-    SchunkWsgPositionController,
-    SpatialInertia,
-    Sphere,
-    StateInterpolatorWithDiscreteDerivative,
-    UnitInertia,
-    System,
-    ConstantVectorSource,
-)
-from pydrake.manipulation.planner import (
-    DifferentialInverseKinematicsIntegrator,
-    DifferentialInverseKinematicsParameters,
-)
-
-from pydrake.common import GetDrakePath
 
 # Adapted from the version in the manipulation repo
 class ExtractBodyPose(LeafSystem):
@@ -76,13 +21,12 @@ class ExtractTCPPose(LeafSystem):
         self.body_index = body_index
         self.DeclareAbstractInputPort("poses", plant.get_body_poses_output_port().Allocate())
         self.DeclareAbstractOutputPort("pose", lambda: AbstractValue.Make(RigidTransform()), self.CalcOutput)
-        self.X_ET = tcp_transform # RigidTransform([0,0,tcp_offset])
-
+        self.X_ET = tcp_transform  # RigidTransform([0,0,tcp_offset])
 
     def CalcOutput(self, context, output):
         poses = self.EvalAbstractInput(context, 0).get_value()
         X_WE = poses[int(self.body_index)]
-        X_WT = X_WE @self.X_ET 
+        X_WT = X_WE @ self.X_ET
         output.get_mutable_value().set(X_WT.rotation(), X_WT.translation())
 
 
@@ -107,7 +51,7 @@ class WorldToRobotFrame(LeafSystem):
 
 class WorldTCPToRobotEEFFrame(LeafSystem):
     """Does not work for mobile robots.
-    
+
     X_WT, X_ET, X_RE, X_RW
 
     X_RE = X_RW @ X_WT @ X_TE
