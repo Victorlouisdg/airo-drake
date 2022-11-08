@@ -80,37 +80,32 @@ class TowelFoldPlanner(DualArmPlannerBase):
         return left_keyposes, right_keyposes
 
     def get_gripper_trajectories(self, times):
-        opened = np.array([self.gripper_max_open_distance / 2.0])
+        opened = np.array([self.gripper_max_openness / 2.0])
         closed = np.array([0.0])
 
-        gripper_traj = PiecewisePolynomial.FirstOrderHold(
+        openness_trajectory = PiecewisePolynomial.FirstOrderHold(
             [times["initial"], times["pregrasp"]], np.hstack([[closed], [opened]])
         )
-        gripper_traj.AppendFirstOrderSegment(times["grasp"], closed)
-        gripper_traj.AppendFirstOrderSegment(times["release"], closed)
-        gripper_traj.AppendFirstOrderSegment(times["retreat"], opened)
-        return gripper_traj, gripper_traj
+        openness_trajectory.AppendFirstOrderSegment(times["grasp"], closed)
+        openness_trajectory.AppendFirstOrderSegment(times["release"], closed)
+        openness_trajectory.AppendFirstOrderSegment(times["retreat"], opened)
+        return openness_trajectory, openness_trajectory
 
     def Plan(self, context, state):
         left_keyposes, right_keyposes = self.get_fold_keyposes(self.towel_keypoints)
-        left_X_G = {"initial": self.left_X_WE_initial, **left_keyposes}
-        right_X_G = {"initial": self.right_X_WE_initial, **right_keyposes}
+        self.left_tcp_keyposes = {"initial": self.inital_left_tcp, **left_keyposes}
+        self.right_tcp_keyposes = {"initial": self.inital_right_tcp, **right_keyposes}
         times = {"initial": 0.0, "pregrasp": 2.0, "grasp": 2.5, "middle": 3.25, "release": 4.0, "retreat": 5.0}
 
-        def FoldingTrajectory(key_poses, times):
-            X_G = list(key_poses.values())
-            times = list(times.values())
-            traj_X_G = PiecewisePose.MakeCubicLinearWithEndLinearVelocity(times, X_G)
-            return traj_X_G
+        def FoldingTrajectory(keyposes_dict, times_dict):
+            keyposes = list(keyposes_dict.values())
+            times = list(times_dict.values())
+            pose_trajectory = PiecewisePose.MakeCubicLinearWithEndLinearVelocity(times, keyposes)
+            return pose_trajectory
 
-        left_gripper_traj, right_gripper_traj = self.get_gripper_trajectories(times)
+        self.left_openness_trajectory, self.right_openness_trajectory = self.get_gripper_trajectories(times)
 
-        self.left_traj_key_poses = left_X_G
-        self.left_traj_X_G = FoldingTrajectory(left_X_G, times)
-        self.right_traj_key_poses = right_X_G
-        self.right_traj_X_G = FoldingTrajectory(right_X_G, times)
-
-        self.left_gripper_traj = left_gripper_traj
-        self.right_gripper_traj = right_gripper_traj
+        self.left_tcp_trajectory = FoldingTrajectory(self.left_tcp_keyposes, times)
+        self.right_tcp_trajectory = FoldingTrajectory(self.right_tcp_keyposes, times)
 
         self.UpdatePlanVisualization()

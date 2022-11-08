@@ -6,60 +6,70 @@ from airo_drake.visualization import VisualizePoseTrajectory
 class DualArmPlannerBase(LeafSystem):
     def __init__(self, plant, meshcat):
         LeafSystem.__init__(self)
-
         # State inputs
-        self.DeclareAbstractInputPort("left_X_WE_current", AbstractValue.Make(RigidTransform()))
-        self.DeclareAbstractInputPort("right_X_WE_current", AbstractValue.Make(RigidTransform()))
-        # I believe gripper_state is distance between fingers and its time derivative.
-        self.DeclareVectorInputPort("left_gripper_state", 2)
-        self.DeclareVectorInputPort("right_gripper_state", 2)
+        self.DeclareAbstractInputPort("left_tcp", AbstractValue.Make(RigidTransform()))
+        self.DeclareAbstractInputPort("right_tcp", AbstractValue.Make(RigidTransform()))
+        # openness_state is distance between fingers and its time derivative.
+        self.DeclareVectorInputPort("left_openness_state", 2)
+        self.DeclareVectorInputPort("right_openness_state", 2)
 
         # Desired state outputs
         self.DeclareAbstractOutputPort(
-            "left_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputLeftGripperPose
+            "left_tcp_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputLeftTCP
         )
         self.DeclareAbstractOutputPort(
-            "right_X_WE_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputRightGripperPose
+            "right_tcp_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputRightTCP
         )
-        self.DeclareVectorOutputPort("left_gripper_position_desired", 1, self.OutputLeftGripperPosition)
-        self.DeclareVectorOutputPort("right_gripper_position_desired", 1, self.OutputRightGripperPosition)
+        self.DeclareVectorOutputPort("left_openness_desired", 1, self.OutputLeftOpenness)
+        self.DeclareVectorOutputPort("right_openness_desired", 1, self.OutputRightOpenness)
 
         self.plant = plant
-        self.inital_pose_right = None
-        self.inital_pose_left = None
-        self.right_traj_X_G = None
+        self.gripper_max_openness = 0.107  # TODO get this from URDF maybe?
+
+        # Initial states
+        self.inital_left_tcp = None
+        self.inital_right_tcp = None
+        self.initial_left_openness_state = None
+        self.initial_right_openness_state = None
+
+        self.left_tcp_trajectory = None
+        self.right_tcp_trajectory = None
+
+        self.left_openness_trajectory = None
+        self.right_openness_trajectory = None
+
+        # For visualization
+        self.left_tcp_keyposes = None
+        self.right_tcp_keyposes = None
+
         self.meshcat = meshcat
-        self.gripper_max_open_distance = 0.107
-        self.left_gripper_traj = None
 
         self.DeclareInitializationDiscreteUpdateEvent(self.Initialize)
         self.DeclarePeriodicUnrestrictedUpdateEvent(0.1, 0.0, self.Plan)
 
     def Initialize(self, context, state):
-        left_X_WE_current = self.get_input_port(0).Eval(context)
-        right_X_WE_current = self.get_input_port(1).Eval(context)
-        left_gripper_state_current = self.get_input_port(2).Eval(context)
-        right_gripper_state_current = self.get_input_port(3).Eval(context)
-        left_gripper_open_distance = left_gripper_state_current[0]
-        right_gripper_open_distance = right_gripper_state_current[1]
+        self.inital_left_tcp = self.GetInputPort("left_tcp").Eval(context)
+        self.inital_right_tcp = self.GetInputPort("right_tcp").Eval(context)
+        self.initial_left_openness_state = self.GetInputPort("left_openness_state").Eval(context)
+        self.initial_right_openness_state = self.GetInputPort("right_openness_state").Eval(context)
 
-        self.right_X_WE_initial = right_X_WE_current
-        self.left_X_WE_initial = left_X_WE_current
+        left_gripper_openness = self.initial_left_openness_state[0]
+        right_gripper_openness = self.initial_right_openness_state[0]
 
-        left_X_G = {"initial": left_X_WE_current, "hold": left_X_WE_current}
-        right_X_G = {"initial": right_X_WE_current, "hold": right_X_WE_current}
+        left_tcp_keyposes = {"initial": self.inital_left_tcp, "hold": self.inital_left_tcp}
+        right_tcp_keyposes = {"initial": self.inital_right_tcp, "hold": self.inital_right_tcp}
 
         # Simply hold the initialization.
-        self.left_traj_X_G = PiecewisePose.MakeLinear([0.0, 1.0], list(left_X_G.values()))
-        self.left_traj_key_poses = left_X_G
-        self.right_traj_X_G = PiecewisePose.MakeLinear([0.0, 1.0], list(right_X_G.values()))
-        self.right_traj_key_poses = right_X_G
+        self.left_tcp_trajectory = PiecewisePose.MakeLinear([0.0, 1.0], list(left_tcp_keyposes.values()))
+        self.left_tcp_keyposes = left_tcp_keyposes
+        self.right_tcp_trajectory = PiecewisePose.MakeLinear([0.0, 1.0], list(right_tcp_keyposes.values()))
+        self.right_tcp_keyposes = right_tcp_keyposes
 
-        self.left_gripper_traj = PiecewisePolynomial.ZeroOrderHold(
-            [0.0, 1.0], [[left_gripper_open_distance, left_gripper_open_distance]]
+        self.left_openness_trajectory = PiecewisePolynomial.ZeroOrderHold(
+            [0.0, 1.0], [[left_gripper_openness, left_gripper_openness]]
         )
-        self.right_gripper_traj = PiecewisePolynomial.ZeroOrderHold(
-            [0.0, 1.0], [[right_gripper_open_distance, right_gripper_open_distance]]
+        self.right_openness_trajectory = PiecewisePolynomial.ZeroOrderHold(
+            [0.0, 1.0], [[right_gripper_openness, right_gripper_openness]]
         )
 
     def Plan(self, context, state):
@@ -68,19 +78,21 @@ class DualArmPlannerBase(LeafSystem):
         self.UpdatePlanVisualization()
 
     def UpdatePlanVisualization(self):
-        VisualizePoseTrajectory(self.meshcat, "left_trajectory", self.left_traj_X_G, self.left_traj_key_poses)
-        VisualizePoseTrajectory(self.meshcat, "right_trajectory", self.right_traj_X_G, self.right_traj_key_poses)
+        VisualizePoseTrajectory(self.meshcat, "left_tcp_trajectory", self.left_tcp_trajectory, self.left_tcp_keyposes)
+        VisualizePoseTrajectory(
+            self.meshcat, "right_tcp_trajectory", self.right_tcp_trajectory, self.right_tcp_keyposes
+        )
 
-    def OutputLeftGripperPose(self, context, output):
-        X_WE = self.left_traj_X_G.GetPose(context.get_time())
-        output.set_value(X_WE)
+    def OutputLeftTCP(self, context, output):
+        left_tcp_pose = self.left_tcp_trajectory.GetPose(context.get_time())
+        output.set_value(left_tcp_pose)
 
-    def OutputRightGripperPose(self, context, output):
-        X_WE = self.right_traj_X_G.GetPose(context.get_time())
-        output.set_value(X_WE)
+    def OutputRightTCP(self, context, output):
+        right_tcp_pose = self.right_tcp_trajectory.GetPose(context.get_time())
+        output.set_value(right_tcp_pose)
 
-    def OutputLeftGripperPosition(self, context, output):
-        output.SetFromVector(self.left_gripper_traj.value(context.get_time()))
+    def OutputLeftOpenness(self, context, output):
+        output.SetFromVector(self.left_openness_trajectory.value(context.get_time()))
 
-    def OutputRightGripperPosition(self, context, output):
-        output.SetFromVector(self.right_gripper_traj.value(context.get_time()))
+    def OutputRightOpenness(self, context, output):
+        output.SetFromVector(self.right_openness_trajectory.value(context.get_time()))

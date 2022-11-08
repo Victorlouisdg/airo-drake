@@ -167,7 +167,7 @@ def SetupRobot(builder, plant, model_instance):
     tcp_transform = RigidTransform(RotationMatrix.MakeZRotation(np.deg2rad(90)), [0, 0, 0.16])
     # tcp_offset = 0.16
     transform = builder.AddSystem(WorldTCPToRobotEEFFrame(plant, model_instance, "ur_base_link", tcp_transform))
-    builder.ExportInput(transform.get_input_port(0), f"{robot_name}_X_WT")
+    builder.ExportInput(transform.get_input_port(0), f"{robot_name}_tcp_target")
     builder.Connect(transform.get_output_port(0), diff_ik.get_input_port(0))
     builder.Connect(plant.get_state_output_port(model_instance), diff_ik.GetInputPort("robot_state"))
 
@@ -184,7 +184,7 @@ def SetupRobot(builder, plant, model_instance):
     body_index = plant.GetBodyByName("ur_tool0", model_instance).index()
     gripper_pose = builder.AddSystem(ExtractTCPPose(plant, body_index, tcp_transform))
     builder.Connect(plant.get_body_poses_output_port(), gripper_pose.GetInputPort("poses"))
-    builder.ExportOutput(gripper_pose.GetOutputPort("pose"), f"{robot_name}_X_WE_estimated")
+    builder.ExportOutput(gripper_pose.GetOutputPort("pose"), f"{robot_name}_tcp")
 
 
 def SetupGripper(builder, plant, model_instance):
@@ -195,12 +195,12 @@ def SetupGripper(builder, plant, model_instance):
     builder.Connect(wsg_controller.get_generalized_force_output_port(), plant.get_actuation_input_port(model_instance))
     builder.Connect(plant.get_state_output_port(model_instance), wsg_controller.get_state_input_port())
 
-    builder.ExportInput(wsg_controller.get_desired_position_input_port(), gripper_name + "_position")
+    builder.ExportInput(wsg_controller.get_desired_position_input_port(), gripper_name + "_openness_target")
 
     wsg_mbp_state_to_wsg_state = builder.AddSystem(MakeMultibodyStateToWsgStateSystem())
     builder.Connect(plant.get_state_output_port(model_instance), wsg_mbp_state_to_wsg_state.get_input_port())
-    builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), gripper_name + "_state_measured")
-    builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force_measured")
+    builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), gripper_name + "_openness_state")
+    builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force")
 
 
 def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
