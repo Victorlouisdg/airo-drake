@@ -93,19 +93,30 @@ def CopyModelBetweenPlants(model_instance, plant_from, plant_to):
     # plant_to.some_function()
 
     # Temporary workaround, reload from URDF.
-    filename = FindResourceOrThrow("drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf")
+    # filename = FindResourceOrThrow("drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf")
     parser = Parser(plant_to)
-    model = parser.AddModelFromFile(filename)
+    AddPackagePaths(parser)
+
+    model_directives = """
+    directives:
+    - add_directives:
+        file: package://airo_drake_models/ur3e_and_wsg.dmd.yaml
+    """
+    directives = LoadModelDirectivesFromString(model_directives)
+    ProcessModelDirectives(directives, parser)
+    model_index = plant_to.GetModelInstanceByName("ur3e")
+
+    # model = parser.AddModelFromFile(filename)
     q0 = plant_from.GetPositions(plant_from.CreateDefaultContext(), model_instance)
     index = 0
-    for joint_index in plant_to.GetJointIndices(model):
+    for joint_index in plant_to.GetJointIndices(model_index):
         joint = plant_to.get_mutable_joint(joint_index)
         if isinstance(joint, RevoluteJoint):
             joint.set_default_angle(q0[index])
             index += 1
 
-    UR_BASE_FRAME = "ur_base_link"
-    plant_to.WeldFrames(plant_to.world_frame(), plant_to.GetFrameByName(UR_BASE_FRAME))
+    # UR_BASE_FRAME = "ur_base_link"
+    # plant_to.WeldFrames(plant_to.world_frame(), plant_to.GetFrameByName(UR_BASE_FRAME))
 
 
 def AddInverseDynamicsController(builder, plant, model_instance) -> System:
@@ -114,10 +125,11 @@ def AddInverseDynamicsController(builder, plant, model_instance) -> System:
     CopyModelBetweenPlants(model_instance, plant, controller_plant)
     controller_plant.Finalize()
 
+    # TODO someone with PID knowledge tune these gains
     num_robot_positions = plant.num_positions(model_instance)
-    kp = np.full(num_robot_positions, 1000)
-    ki = np.full(num_robot_positions, 5000)
-    kd = np.full(num_robot_positions, 1000)
+    kp = np.full(num_robot_positions, 200)
+    ki = np.full(num_robot_positions, 200)
+    kd = np.full(num_robot_positions, 200)
 
     inverse_dynamics_controller = InverseDynamicsController(
         controller_plant, kp, ki, kd, has_reference_acceleration=False

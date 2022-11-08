@@ -1,6 +1,15 @@
-from pydrake.all import AbstractValue, LeafSystem, RigidTransform, PiecewisePose, Rgba, PiecewisePolynomial
+from pydrake.all import (
+    AbstractValue,
+    LeafSystem,
+    RigidTransform,
+    PiecewisePose,
+    Rgba,
+    PiecewisePolynomial,
+    RotationMatrix,
+)
 import numpy as np
 from airo_drake.cloth_manipulation.towel import fake_towel_keypoints, order_keypoints
+from airo_drake.geometry import top_down_orientation
 
 from airo_drake.visualization import AddMeshcatTriad, VisualizePath, VisualizePoseTrajectory
 
@@ -96,13 +105,20 @@ class TowelFoldPlanner(DualArmPlannerBase):
     def get_grasp_poses(self, keypoints):
         left_grasp_pose = None
         ordered_keypoints = order_keypoints(keypoints)
+        right_edge = ordered_keypoints[:, 0] - ordered_keypoints[:, 3]
 
         initial_X_WE = self.right_X_WE_initial
         initial_rotation = initial_X_WE.rotation()
 
+        # y_rotation = RotationMatrix.MakeYRotation(np.deg2rad(15))
+
+        topdown = RotationMatrix(top_down_orientation(right_edge))
+
+        # print(topdown)
+
         bottom_right_corner = ordered_keypoints[:, 3]
 
-        right_grasp_pose = RigidTransform(initial_rotation, bottom_right_corner)
+        right_grasp_pose = RigidTransform(topdown, bottom_right_corner)
         return left_grasp_pose, right_grasp_pose
 
     def Plan(self, context, state):
