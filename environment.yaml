@@ -16,4 +16,5 @@ dependencies:
     - pydot
     - pytest
     - pre-commit
+    - black
     - -e airo_drake/

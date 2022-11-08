@@ -34,9 +34,9 @@ def VisualizePath(meshcat, treepath, path, closed=False, thickness=2, color=Rgba
 def VisualizePoseTrajectory(meshcat, treepath, trajectory, key_poses={}, color=Rgba(1, 0.65, 0)):
     traj_X_G = trajectory
     traj_p_G = traj_X_G.get_position_trajectory()
-    p_G = traj_p_G.vector_values(traj_p_G.get_segment_times())
+    p_G = traj_p_G.vector_values(np.linspace(traj_X_G.start_time(), traj_X_G.end_time(), 100))
 
-    VisualizePath(meshcat, treepath, p_G, color)
+    VisualizePath(meshcat, treepath, p_G, color=color)
 
     for name, X in key_poses.items():
         AddMeshcatTriad(meshcat, f"{treepath}/X_G{name}", X_PT=X)
