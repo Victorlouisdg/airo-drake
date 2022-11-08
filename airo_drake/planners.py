@@ -6,6 +6,7 @@ from pydrake.all import (
     Rgba,
     PiecewisePolynomial,
     RotationMatrix,
+    AngleAxis
 )
 import numpy as np
 from airo_drake.cloth_manipulation.towel import fake_towel_keypoints, order_keypoints
@@ -110,15 +111,26 @@ class TowelFoldPlanner(DualArmPlannerBase):
         initial_X_WE = self.right_X_WE_initial
         initial_rotation = initial_X_WE.rotation()
 
-        # y_rotation = RotationMatrix.MakeYRotation(np.deg2rad(15))
+        global_y_rotation = RotationMatrix.MakeYRotation(np.deg2rad(15))
+
 
         topdown = RotationMatrix(top_down_orientation(right_edge))
+
+
+        tilt_angle = 15
+        gripper_y = topdown.col(1)
+        # local_y_rotation = Rotation.from_rotvec(np.deg2rad(tilt_angle) * gripper_y)
+
+        local_y_rotation = RotationMatrix(AngleAxis(np.deg2rad(tilt_angle), gripper_y))
+
+        topdown = RotationMatrix(top_down_orientation(right_edge))
+        rotation = local_y_rotation @ topdown
 
         # print(topdown)
 
         bottom_right_corner = ordered_keypoints[:, 3]
 
-        right_grasp_pose = RigidTransform(topdown, bottom_right_corner)
+        right_grasp_pose = RigidTransform(rotation, bottom_right_corner)
         return left_grasp_pose, right_grasp_pose
 
     def Plan(self, context, state):
