@@ -170,6 +170,18 @@ class TowelFoldPlanner(DualArmPlannerBase):
         }
         return left_keyposes, right_keyposes
 
+    def get_gripper_trajectories(self, times):
+        opened = np.array([self.gripper_max_open_distance / 2.0])
+        closed = np.array([0.0])
+
+        gripper_traj = PiecewisePolynomial.FirstOrderHold(
+            [times["initial"], times["pregrasp"]], np.hstack([[closed], [opened]])
+        )
+        gripper_traj.AppendFirstOrderSegment(times["grasp"], closed)
+        gripper_traj.AppendFirstOrderSegment(times["release"], closed)
+        gripper_traj.AppendFirstOrderSegment(times["retreat"], opened)
+        return gripper_traj, gripper_traj
+
     def Plan(self, context, state):
         left_keyposes, right_keyposes = self.get_fold_keyposes(self.towel_keypoints)
         left_X_G = {"initial": self.left_X_WE_initial, **left_keyposes}
@@ -182,9 +194,14 @@ class TowelFoldPlanner(DualArmPlannerBase):
             traj_X_G = PiecewisePose.MakeCubicLinearWithEndLinearVelocity(times, X_G)
             return traj_X_G
 
+        left_gripper_traj, right_gripper_traj = self.get_gripper_trajectories(times)
+
         self.left_traj_key_poses = left_X_G
         self.left_traj_X_G = FoldingTrajectory(left_X_G, times)
         self.right_traj_key_poses = right_X_G
         self.right_traj_X_G = FoldingTrajectory(right_X_G, times)
+
+        self.left_gripper_traj = left_gripper_traj
+        self.right_gripper_traj = right_gripper_traj
 
         self.UpdatePlanVisualization()
