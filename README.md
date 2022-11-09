@@ -2,20 +2,12 @@
 # AIRO-Drake
 Scripts and notebooks to test the [Drake](https://drake.mit.edu/) robotics toolbox for our use cases at AIRO.
 
-# Installation
 ## Quick Installation
 ```
 conda env create -f environment.yaml
 conda activate drake
 ```
-## Installation with Drake built from source
-First build drake from [source](https://drake.mit.edu/from_source.html), then in this repo do:
-```
-conda env create -f environment_drake_source.yaml
-conda activate drake_source
-conda develop ~/drake-build/install/lib/python3.8/site-packages/
-```
-When installing drake through pip, not all models are included due to their large size.
+For more advanced installation options see [advanced_installation.md](docs/advanced_installation.md).
 
-# Usage
+## Usage
 You can start exploring by running the [notebooks](notebooks).

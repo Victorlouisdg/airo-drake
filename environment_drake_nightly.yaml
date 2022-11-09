@@ -1,0 +1,21 @@
+# in this yaml you should add dependencies that are not included in the python packages
+# (or that you want to install anyways such as torch to install cuda w/ conda)
+# also make sure to install the local packages with the "-e" prefix
+# to create an environment: conda create env -f environment.yaml
+# to update: conda env update -f environment.yaml
+name: drake_nightly
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - ipykernel
+  - pip
+  - pip:
+    - https://drake-packages.csail.mit.edu/drake/nightly/drake-latest-cp38-cp38-manylinux_2_31_x86_64.whl
+    - numpy
+    - matplotlib
+    - pydot
+    - pytest
+    - pre-commit
+    - black
+    - -e airo_drake/
