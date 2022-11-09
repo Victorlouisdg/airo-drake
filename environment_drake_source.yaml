@@ -3,7 +3,7 @@
 # also make sure to install the local packages with the "-e" prefix
 # to create an environment: conda create env -f environment.yaml
 # to update: conda env update -f environment.yaml
-name: drake
+name: drake_source
 channels:
   - conda-forge
 dependencies:
@@ -11,7 +11,6 @@ dependencies:
   - ipykernel
   - pip
   - pip:
-    - drake
     - numpy
     - matplotlib
     - pydot

@@ -7,7 +7,7 @@ directives:
     child: airo_cart::table_center
 - add_model:
     name: ur3e_left
-    file: package://drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf
+    file: package://airo_drake_models/ur3e/ur3e_cylinders_collision.urdf
     default_joint_positions:
         ur_shoulder_pan_joint: [-1.57]  # -pi/2
         ur_shoulder_lift_joint: [-2.36] # -3/4 pi
@@ -29,7 +29,7 @@ directives:
         translation: [0, 0, 0.04]
 - add_model:
     name: ur3e_right
-    file: package://drake/manipulation/models/ur3e/ur3e_cylinders_collision.urdf
+    file: package://airo_drake_models/ur3e/ur3e_cylinders_collision.urdf
     default_joint_positions:
         ur_shoulder_pan_joint: [1.57]   # pi/2
         ur_shoulder_lift_joint: [-0.79] # -1/4 pi
