@@ -100,9 +100,9 @@ def AddInverseDynamicsController(builder, plant, model_instance) -> System:
 
     # TODO someone with PID knowledge tune these gains
     num_robot_positions = plant.num_positions(model_instance)
-    kp = np.full(num_robot_positions, 200)
-    ki = np.full(num_robot_positions, 200)
-    kd = np.full(num_robot_positions, 200)
+    kp = np.full(num_robot_positions, 100)
+    ki = np.full(num_robot_positions, 100)
+    kd = np.full(num_robot_positions, 100)
 
     inverse_dynamics_controller = InverseDynamicsController(
         controller_plant, kp, ki, kd, has_reference_acceleration=False
@@ -205,7 +205,7 @@ def SetupGripper(builder, plant, model_instance):
     builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force")
 
 
-def MakeUR3eCartStation(additional_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
+def MakeUR3eCartStation(additional_directives="", robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
     builder = DiagramBuilder()
 
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=time_step)
