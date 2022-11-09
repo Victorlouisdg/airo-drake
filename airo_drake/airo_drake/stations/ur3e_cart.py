@@ -21,10 +21,12 @@ from pydrake.all import (
     System,
 )
 from pydrake.common import GetDrakePath
+from pydrake.geometry import MeshcatVisualizer
 from pydrake.manipulation.planner import (
     DifferentialInverseKinematicsIntegrator,
     DifferentialInverseKinematicsParameters,
 )
+from pydrake.systems.all import Simulator
 
 from airo_drake.util_systems import ExtractTCPPose, WorldTCPToRobotEEFFrame
 
@@ -227,3 +229,31 @@ def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_pre
     diagram = builder.Build()
     diagram.set_name("UR3e Cart Station")
     return diagram
+
+
+def ConnectUR3eCartWithDualArmPlanner(builder, station, planner):
+    # Connect state estimation to planner.
+    builder.Connect(station.GetOutputPort("ur3e_left_tcp"), planner.GetInputPort("left_tcp"))
+    builder.Connect(station.GetOutputPort("ur3e_right_tcp"), planner.GetInputPort("right_tcp"))
+    builder.Connect(station.GetOutputPort("wsg_left_openness_state"), planner.GetInputPort("left_openness_state"))
+    builder.Connect(station.GetOutputPort("wsg_right_openness_state"), planner.GetInputPort("right_openness_state"))
+
+    # Connect planner output to station.
+    builder.Connect(planner.GetOutputPort("left_tcp_desired"), station.GetInputPort("ur3e_left_tcp_target"))
+    builder.Connect(planner.GetOutputPort("right_tcp_desired"), station.GetInputPort("ur3e_right_tcp_target"))
+    builder.Connect(planner.GetOutputPort("left_openness_desired"), station.GetInputPort("wsg_left_openness_target"))
+    builder.Connect(planner.GetOutputPort("right_openness_desired"), station.GetInputPort("wsg_right_openness_target"))
+
+
+def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
+    builder = DiagramBuilder()
+    builder.AddSystem(station)
+    builder.AddSystem(planner)
+    ConnectUR3eCartWithDualArmPlanner(builder, station, planner)
+
+    visualizer = MeshcatVisualizer.AddToBuilder(builder, station.GetOutputPort("query_object"), meshcat)
+    diagram = builder.Build()
+    simulator = Simulator(diagram)
+    visualizer.StartRecording(False)
+    simulator.AdvanceTo(6.0)
+    visualizer.PublishRecording()
