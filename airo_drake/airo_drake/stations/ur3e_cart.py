@@ -43,19 +43,19 @@ def AddPackagePaths(parser):
     )
 
 
-def AddModelsToPlant(plant, model_directives):
+def AddModelsToPlant(plant, additional_directives):
     parser = Parser(plant)
     AddPackagePaths(parser)
-
-    model_directives = """
+    model_directives = (
+        """
     directives:
     - add_directives:
         file: package://airo_drake_models/dual_ur3e_and_wsg.dmd.yaml
     """
-
-    if model_directives:
-        directives = LoadModelDirectivesFromString(model_directives)
-        ProcessModelDirectives(directives, parser)
+        + additional_directives
+    )
+    directives = LoadModelDirectivesFromString(model_directives)
+    ProcessModelDirectives(directives, parser)
 
 
 def CopyModelBetweenPlants(model_instance, plant_from, plant_to):
@@ -205,11 +205,11 @@ def SetupGripper(builder, plant, model_instance):
     builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force")
 
 
-def MakeUR3eCartStation(model_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
+def MakeUR3eCartStation(additional_directives=None, robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
     builder = DiagramBuilder()
 
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=time_step)
-    AddModelsToPlant(plant, model_directives)
+    AddModelsToPlant(plant, additional_directives)
     plant.Finalize()
 
     for i in range(plant.num_model_instances()):

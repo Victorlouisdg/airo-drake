@@ -12,7 +12,7 @@ directives:
         ur_shoulder_pan_joint: [-1.57]  # -pi/2
         ur_shoulder_lift_joint: [-2.36] # -3/4 pi
         ur_elbow_joint: [1.57]          # pi/2
-        ur_wrist_1_joint: [-0.79]       # -pi/4
+        ur_wrist_1_joint: [-1.57]       # -pi/4
         ur_wrist_2_joint: [-1.57]       # -pi/2
         ur_wrist_3_joint: [0]           # 0
 - add_weld:
@@ -34,7 +34,7 @@ directives:
         ur_shoulder_pan_joint: [1.57]   # pi/2
         ur_shoulder_lift_joint: [-0.79] # -1/4 pi
         ur_elbow_joint: [-1.57]         # -pi/2
-        ur_wrist_1_joint: [-2.36]       # -3/4 pi/
+        ur_wrist_1_joint: [-1.57]       # -3/4 pi/
         ur_wrist_2_joint: [1.57]        # pi/2
         ur_wrist_3_joint: [0]           # 0
 - add_weld:
