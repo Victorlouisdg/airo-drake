@@ -21,7 +21,7 @@ class ExtractTCPPose(LeafSystem):
         self.body_index = body_index
         self.DeclareAbstractInputPort("poses", plant.get_body_poses_output_port().Allocate())
         self.DeclareAbstractOutputPort("pose", lambda: AbstractValue.Make(RigidTransform()), self.CalcOutput)
-        self.X_ET = tcp_transform  # RigidTransform([0,0,tcp_offset])
+        self.X_ET = tcp_transform
 
     def CalcOutput(self, context, output):
         poses = self.EvalAbstractInput(context, 0).get_value()
@@ -66,7 +66,6 @@ class WorldTCPToRobotEEFFrame(LeafSystem):
         plant_context = plant.CreateDefaultContext()
         X_WR = plant.GetFrameByName(base_frame, model_instance).CalcPoseInWorld(plant_context)
         self.X_RW = X_WR.inverse()
-        # X_ET = RigidTransform([0,0,tcp_offset])
         X_ET = tcp_transform
         self.X_TE = X_ET.inverse()
 

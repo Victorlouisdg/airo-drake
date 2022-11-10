@@ -132,7 +132,7 @@ def AddDifferentialIKIntegrator(builder, dynamics_controller):
     return differential_IK_integrator
 
 
-def SetupUR3e(builder, plant, model_instance):
+def SetupUR3e(builder, plant, model_instance, tcp_offset=0.16):
     robot_name = plant.GetModelInstanceName(model_instance)
 
     num_robot_positions = plant.num_positions(model_instance)
@@ -154,8 +154,7 @@ def SetupUR3e(builder, plant, model_instance):
     # Add the DifferentialIK, which takes gripper poses in robot frame and outputs joint positions
     diff_ik = AddDifferentialIKIntegrator(builder, dynamics_controller)
 
-    tcp_transform = RigidTransform(RotationMatrix.MakeZRotation(np.deg2rad(90)), [0, 0, 0.16])
-    # tcp_offset = 0.16
+    tcp_transform = RigidTransform(RotationMatrix.MakeZRotation(np.deg2rad(90)), [0, 0, tcp_offset])
     transform = builder.AddSystem(WorldTCPToRobotEEFFrame(plant, model_instance, "ur_base_link", tcp_transform))
     builder.ExportInput(transform.get_input_port(0), f"{robot_name}_tcp_target")
     builder.Connect(transform.get_output_port(0), diff_ik.get_input_port(0))

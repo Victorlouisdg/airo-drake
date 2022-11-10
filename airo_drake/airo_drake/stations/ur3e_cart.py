@@ -64,7 +64,7 @@ def ConnectUR3eCartWithDualArmPlanner(builder, station, planner):
     builder.Connect(planner.GetOutputPort("right_openness_desired"), station.GetInputPort("wsg_right_openness_target"))
 
 
-def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
+def RunAndPublishSimulation(station, planner, meshcat, simulation_time=10.0):
     builder = DiagramBuilder()
     builder.AddSystem(station)
     builder.AddSystem(planner)
@@ -74,5 +74,5 @@ def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
     diagram = builder.Build()
     simulator = Simulator(diagram)
     visualizer.StartRecording(False)
-    simulator.AdvanceTo(6.0)
+    simulator.AdvanceTo(simulation_time)
     visualizer.PublishRecording()

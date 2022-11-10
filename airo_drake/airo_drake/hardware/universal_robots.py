@@ -82,6 +82,9 @@ class UR(RobotArm):
             poses.append(pose_extended)
         self.rtde_control.moveL(poses)
 
+    def set_tcp_target(self, tcp_desired: np.ndarray, time):
+        self.rtde_control.servoL(tcp_desired, 0, 0, time, 0.1, 300)
+
     def ensure_pose_safe(self, pose_in_world):
         if self.is_pose_unsafe(pose_in_world):
             raise ValueError(f"Cannot safely move {self.name} to world pose {pose_in_world}.")
