@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def fake_towel_keypoints(towel_length=0.3, towel_width=0.2, height=0.0, dx=0.02, dy=0.05):
+def fake_towel_keypoints(towel_length=0.3, towel_width=0.2, height=0.0):
     x = towel_width / 2
     y = towel_length / 2
     z = height
