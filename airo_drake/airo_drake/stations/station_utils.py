@@ -38,26 +38,11 @@ def AddPackagePaths(parser):
     )
 
 
-def AddModelsToPlant(plant, additional_directives):
-    parser = Parser(plant)
-    AddPackagePaths(parser)
-    model_directives = (
-        """
-    directives:
-    - add_directives:
-        file: package://airo_drake_models/dual_ur3e_and_wsg.dmd.yaml
-    """
-        + additional_directives
-    )
-    directives = LoadModelDirectivesFromString(model_directives)
-    ProcessModelDirectives(directives, parser)
-
-
 def CopyModelBetweenPlants(model_instance, plant_from, plant_to):
     print("WARNING: CopyModelBetweenPlants not implemented correctly yet!")
     # TODO Figure out how to implement actual copy.
     name = plant_from.GetModelInstanceName(model_instance)
-    plant_to.AddModelInstance(name)
+    # plant_to.AddModelInstance(name)
     # plant_to.some_function()
 
     # Temporary workaround, reload from URDF.
@@ -70,6 +55,14 @@ def CopyModelBetweenPlants(model_instance, plant_from, plant_to):
     - add_directives:
         file: package://airo_drake_models/ur3e_and_wsg.dmd.yaml
     """
+
+    if name == "ur3e":
+        model_directives = """
+    directives:
+    - add_directives:
+        file: package://airo_drake_models/ur3e.dmd.yaml
+    """
+
     directives = LoadModelDirectivesFromString(model_directives)
     ProcessModelDirectives(directives, parser)
     model_index = plant_to.GetModelInstanceByName("ur3e")
@@ -198,3 +191,11 @@ def SetupWSG50(builder, plant, model_instance):
     builder.Connect(plant.get_state_output_port(model_instance), wsg_mbp_state_to_wsg_state.get_input_port())
     builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), gripper_name + "_openness_state")
     builder.ExportOutput(wsg_controller.get_grip_force_output_port(), gripper_name + "_force")
+
+
+def ExportCheatPorts(builder, scene_graph, plant):
+    """Port that can be useful for development in simulation, but aren't available on real hardware."""
+    builder.ExportOutput(scene_graph.get_query_output_port(), "query_object")
+    builder.ExportOutput(plant.get_contact_results_output_port(), "contact_results")
+    builder.ExportOutput(plant.get_state_output_port(), "plant_continuous_state")
+    builder.ExportOutput(plant.get_body_poses_output_port(), "body_poses")

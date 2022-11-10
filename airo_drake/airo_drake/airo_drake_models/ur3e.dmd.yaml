@@ -1,0 +1,20 @@
+directives:
+- add_model:
+    name: airo_cart
+    file: package://airo_drake_models/airo_cart.sdf
+- add_weld:
+    parent: world
+    child: airo_cart::table_center
+- add_model:
+    name: ur3e
+    file: package://airo_drake_models/ur3e/ur3e_cylinders_collision.urdf
+    default_joint_positions:
+        ur_shoulder_pan_joint: [-1.57]  # -pi/2
+        ur_shoulder_lift_joint: [-2.36] # -3/4 pi
+        ur_elbow_joint: [1.57]          # pi/2
+        ur_wrist_1_joint: [-0.79]       # -pi/4
+        ur_wrist_2_joint: [-1.57]       # -pi/2
+        ur_wrist_3_joint: [0]           # 0
+- add_weld:
+    parent: world
+    child: ur3e::ur_base_link

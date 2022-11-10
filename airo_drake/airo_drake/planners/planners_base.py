@@ -3,6 +3,41 @@ from pydrake.all import AbstractValue, LeafSystem, PiecewisePolynomial, Piecewis
 from airo_drake.visualization import VisualizePoseTrajectory
 
 
+class PlannerBase(LeafSystem):
+    def __init__(self, plant, meshcat):
+        LeafSystem.__init__(self)
+        self.DeclareAbstractInputPort("tcp", AbstractValue.Make(RigidTransform()))
+        self.DeclareAbstractOutputPort("tcp_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputTCP)
+
+        self.plant = plant
+        self.inital_tcp = None
+        self.tcp_trajectory = None
+        self.meshcat = meshcat
+
+        self.DeclareInitializationDiscreteUpdateEvent(self.Initialize)
+        self.DeclarePeriodicUnrestrictedUpdateEvent(0.1, 0.0, self.Plan)
+
+    def Initialize(self, context, state):
+        self.inital_tcp = self.GetInputPort("tcp").Eval(context)
+        tcp_keyposes = {"initial": self.inital_tcp, "hold": self.inital_tcp}
+
+        # Simply hold the initialization.
+        self.tcp_trajectory = PiecewisePose.MakeLinear([0.0, 1.0], list(tcp_keyposes.values()))
+        self.tcp_keyposes = tcp_keyposes
+
+    def Plan(self, context, state):
+        """Sets the trajectories for the right and left gripper poses and states."""
+        # Implement you planning here, e.g. update the trajectories.
+        self.UpdatePlanVisualization()
+
+    def UpdatePlanVisualization(self):
+        VisualizePoseTrajectory(self.meshcat, "tcp_trajectory", self.tcp_trajectory, self.tcp_keyposes)
+
+    def OutputTCP(self, context, output):
+        tcp_pose = self.tcp_trajectory.GetPose(context.get_time())
+        output.set_value(tcp_pose)
+
+
 class DualArmPlannerBase(LeafSystem):
     def __init__(self, plant, meshcat):
         LeafSystem.__init__(self)

@@ -1,15 +1,38 @@
-from pydrake.all import AddMultibodyPlantSceneGraph, DiagramBuilder, ModelInstanceIndex
+from pydrake.all import (
+    AddMultibodyPlantSceneGraph,
+    DiagramBuilder,
+    LoadModelDirectivesFromString,
+    ModelInstanceIndex,
+    Parser,
+    ProcessModelDirectives,
+)
 from pydrake.geometry import MeshcatVisualizer
 from pydrake.systems.all import Simulator
 
-from airo_drake.stations.station_utils import AddModelsToPlant, SetupUR3e, SetupWSG50
+from airo_drake.stations.station_utils import AddPackagePaths, ExportCheatPorts, SetupUR3e, SetupWSG50
+
+
+def AddUR3eCartAndModelsToPlant(plant, additional_directives):
+    # TODO eventually make this function more general.
+    parser = Parser(plant)
+    AddPackagePaths(parser)
+    model_directives = (
+        """
+    directives:
+    - add_directives:
+        file: package://airo_drake_models/dual_ur3e_and_wsg.dmd.yaml
+    """
+        + additional_directives
+    )
+    directives = LoadModelDirectivesFromString(model_directives)
+    ProcessModelDirectives(directives, parser)
 
 
 def MakeUR3eCartStation(additional_directives="", robots_prefix="ur3e", gripper_prefix="wsg", time_step=0.001):
     builder = DiagramBuilder()
 
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=time_step)
-    AddModelsToPlant(plant, additional_directives)
+    AddUR3eCartAndModelsToPlant(plant, additional_directives)
     plant.Finalize()
 
     for i in range(plant.num_model_instances()):
@@ -20,11 +43,7 @@ def MakeUR3eCartStation(additional_directives="", robots_prefix="ur3e", gripper_
         if model_instance_name.startswith(gripper_prefix):
             SetupWSG50(builder, plant, model_instance)
 
-    # Export "cheat" ports.
-    builder.ExportOutput(scene_graph.get_query_output_port(), "query_object")
-    builder.ExportOutput(plant.get_contact_results_output_port(), "contact_results")
-    builder.ExportOutput(plant.get_state_output_port(), "plant_continuous_state")
-    builder.ExportOutput(plant.get_body_poses_output_port(), "body_poses")
+    ExportCheatPorts(builder, scene_graph, plant)
 
     diagram = builder.Build()
     diagram.set_name("UR3e Cart Station")
