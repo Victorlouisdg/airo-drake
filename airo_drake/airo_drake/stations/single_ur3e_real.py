@@ -2,8 +2,7 @@ import numpy as np
 from pydrake.all import DiagramBuilder, RotationMatrix
 from pydrake.systems.all import AbstractValue, LeafSystem, RigidTransform, Simulator
 
-# from airo_drake.hardware.universal_robots import UR
-from airo_drake.hardware.fake_hardware import FakeArm
+from airo_drake.hardware.universal_robots import UR
 from airo_drake.stations.single_ur3e import ConnectUR3etWithPlanner
 
 
@@ -18,9 +17,12 @@ class UR3eStationHardwareInterface(LeafSystem):
             prerequisites_of_calc=set([self.time_ticket()]),
         )
 
-        self.victor = FakeArm("victor", np.identity(4), None, None, None)  # , ip_victor)
+        ip_victor = "10.42.0.162"
 
-        self.control_period = 0.1
+        # self.victor = FakeArm("victor", np.identity(4), None, None, None)  # , ip_victor)
+        self.victor = UR("victor", np.identity(4), None, None, None, ip_victor)
+
+        self.control_period = 0.05
         self.DeclarePeriodicUnrestrictedUpdateEvent(self.control_period, 0.0, self.CommandTCPPose)
 
     def CommandTCPPose(self, context, state):
