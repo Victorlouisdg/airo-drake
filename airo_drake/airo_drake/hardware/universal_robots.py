@@ -1,10 +1,11 @@
 from typing import List, Optional
 
 import numpy as np
-from cloth_manipulation.hardware.base_classes import Gripper, RobotArm
 from rtde_control import RTDEControlInterface
 from rtde_receive import RTDEReceiveInterface
 from scipy.spatial.transform import Rotation as R
+
+from airo_drake.hardware.base_classes import Gripper, RobotArm
 
 
 def homogeneous_pose_to_position_and_rotvec(pose: np.ndarray) -> np.ndarray:
@@ -15,7 +16,12 @@ def homogeneous_pose_to_position_and_rotvec(pose: np.ndarray) -> np.ndarray:
 
 
 def position_and_rotvec_to_homogeneuos_pose(pose: np.ndarray) -> np.ndarray:
-    return np.identity(4)
+    orientation = R.from_rotvec(pose[3:6]).as_matrix()
+    position = pose[0:3]
+    pose = np.eye(4)
+    pose[:3, :3] = orientation
+    pose[:3, -1] = position
+    return pose
 
 
 class UR(RobotArm):
@@ -47,7 +53,10 @@ class UR(RobotArm):
 
     @property
     def pose(self):
-        pose = self.rtde_retrieve.getActualTCPPose()
+        pose = self.rtde_receive.getActualTCPPose()
+        print("RECEIVED POSE")
+        print(pose)
+        print(position_and_rotvec_to_homogeneuos_pose(pose))
         return position_and_rotvec_to_homogeneuos_pose(pose)
 
     def move_tcp(self, pose_in_world: np.ndarray):
@@ -72,6 +81,9 @@ class UR(RobotArm):
             pose_extended = np.concatenate([pose, [acceleration, speed, self.BLEND_RADIUS]])
             poses.append(pose_extended)
         self.rtde_control.moveL(poses)
+
+    def set_tcp_target(self, tcp_desired: np.ndarray, time):
+        self.rtde_control.servoL(tcp_desired, 0, 0, time, 0.1, 300)
 
     def ensure_pose_safe(self, pose_in_world):
         if self.is_pose_unsafe(pose_in_world):

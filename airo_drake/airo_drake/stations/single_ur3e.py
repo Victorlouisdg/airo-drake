@@ -41,7 +41,7 @@ def MakeUR3eCartStation(additional_directives="", robots_prefix="ur3e", time_ste
         model_instance = ModelInstanceIndex(i)
         model_instance_name = plant.GetModelInstanceName(model_instance)
         if model_instance_name.startswith(robots_prefix):
-            SetupUR3e(builder, plant, model_instance)
+            SetupUR3e(builder, plant, model_instance, tcp_offset=0.05)
 
     ExportCheatPorts(builder, scene_graph, plant)
 
@@ -58,7 +58,7 @@ def ConnectUR3etWithPlanner(builder, station, planner):
     builder.Connect(planner.GetOutputPort("tcp_desired"), station.GetInputPort("ur3e_tcp_target"))
 
 
-def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
+def RunAndPublishSimulation(station, planner, meshcat, simulation_time=10.0):
     builder = DiagramBuilder()
     builder.AddSystem(station)
     builder.AddSystem(planner)
@@ -68,5 +68,5 @@ def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
     diagram = builder.Build()
     simulator = Simulator(diagram)
     visualizer.StartRecording(False)
-    simulator.AdvanceTo(6.0)
+    simulator.AdvanceTo(simulation_time)
     visualizer.PublishRecording()
