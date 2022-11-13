@@ -18,4 +18,5 @@ dependencies:
     - pytest
     - pre-commit
     - black
+    - requests
     - -e airo_drake/

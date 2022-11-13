@@ -4,12 +4,11 @@ from airo_drake.visualization import VisualizePoseTrajectory
 
 
 class PlannerBase(LeafSystem):
-    def __init__(self, plant, meshcat):
+    def __init__(self, meshcat):
         LeafSystem.__init__(self)
         self.DeclareAbstractInputPort("tcp", AbstractValue.Make(RigidTransform()))
         self.DeclareAbstractOutputPort("tcp_desired", lambda: AbstractValue.Make(RigidTransform()), self.OutputTCP)
 
-        self.plant = plant
         self.inital_tcp = None
         self.tcp_trajectory = None
         self.meshcat = meshcat
@@ -39,7 +38,7 @@ class PlannerBase(LeafSystem):
 
 
 class DualArmPlannerBase(LeafSystem):
-    def __init__(self, plant, meshcat):
+    def __init__(self, meshcat):
         LeafSystem.__init__(self)
         # State inputs
         self.DeclareAbstractInputPort("left_tcp", AbstractValue.Make(RigidTransform()))
@@ -58,7 +57,6 @@ class DualArmPlannerBase(LeafSystem):
         self.DeclareVectorOutputPort("left_openness_desired", 1, self.OutputLeftOpenness)
         self.DeclareVectorOutputPort("right_openness_desired", 1, self.OutputRightOpenness)
 
-        self.plant = plant
         self.gripper_max_openness = 0.107  # TODO get this from URDF maybe?
 
         # Initial states

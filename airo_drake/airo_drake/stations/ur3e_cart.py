@@ -72,7 +72,14 @@ def RunAndPublishSimulation(station, planner, meshcat, simulation_time=6.0):
 
     visualizer = MeshcatVisualizer.AddToBuilder(builder, station.GetOutputPort("query_object"), meshcat)
     diagram = builder.Build()
-    simulator = Simulator(diagram)
+
+    context = diagram.CreateDefaultContext()
+
+    plant = station.GetSubsystemByName("plant")
+    body = plant.GetBodyByName("link_0")
+    body.SetMass(context, 0.2)
+
+    simulator = Simulator(diagram, context)
     visualizer.StartRecording(False)
     simulator.AdvanceTo(6.0)
     visualizer.PublishRecording()
