@@ -9,7 +9,7 @@ from airo_drake.visualization import VisualizePath
 
 class TowelFoldPlanner(DualArmPlannerBase):
     def __init__(self, plant, meshcat):
-        super().__init__(plant, meshcat)
+        super().__init__(meshcat)
         self.towel_keypoints = fake_towel_keypoints(height=0.0)  # later this should be an inputport
         VisualizePath(meshcat, "towel_keypoints", self.towel_keypoints, closed=True, color=Rgba(0, 1, 1), thickness=10)
 
