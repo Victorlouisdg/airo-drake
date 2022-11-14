@@ -19,4 +19,6 @@ dependencies:
     - pre-commit
     - black
     - requests
+    - scipy
+    - pybullet
     - -e airo_drake/

@@ -58,20 +58,19 @@ class RobotArm(ABC):
     def pose(self):
         """Read-only attribute that contains the current tcp world pose."""
 
-    @abstractmethod
     def is_pose_unsafe(self, pose_in_world) -> bool:
         """Check whether it is unsafe to go the given pose. Intended for use externally e.g. by a control of grasping
         strategy or internally as a safety check before executing a motion."""
+        pass
 
-    @abstractmethod
     def move_tcp(self, pose_in_world: np.ndarray):
         """Move the TCP to a pose with no guarantees on the path taken."""
+        pass
 
-    @abstractmethod
     def move_tcp_linear(self, pose_in_world: np.ndarray, speed: float, acceleration: float):
         """Move the robot TCP linearly from its current pose to the specified pose."""
+        pass
 
-    @abstractmethod
     def move_tcp_linear_path(self, poses_in_world: List[np.ndarray], speed: float, acceleration: float):
         """Move the robot TCP linearly between the waypoints of path."""
 
